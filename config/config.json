@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "entry": "./lib/webparts/ttDemo/TtDemoWebPart.js",
+      "manifest": "./src/webparts/ttDemo/TtDemoWebPart.manifest.json",
+      "outputPath": "./dist/tt-demo.bundle.js"
+    }
+  ],
+  "externals": {},
+  "localizedResources": {
+    "ttDemoStrings": "webparts/ttDemo/loc/{locale}.js"
+  }
+}

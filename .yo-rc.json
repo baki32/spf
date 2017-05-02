@@ -1,0 +1,7 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "libraryName": "spf",
+    "libraryId": "bdbf25a3-ccf7-4496-8dd9-6fd19c84452e",
+    "framework": "react"
+  }
+}
