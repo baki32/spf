@@ -3,6 +3,7 @@ declare interface ITtDemoStrings {
   BasicGroupName: string;
   DescriptionFieldLabel: string;
   ListNameFieldLabel: string;
+  ListNameFieldLabelDescription: string;
 }
 
 declare module 'ttDemoStrings' {

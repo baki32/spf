@@ -1,7 +1,9 @@
 define([], function() {
   return {
-    "PropertyPaneDescription": "Description",
-    "BasicGroupName": "Group Name",
-    "DescriptionFieldLabel": "Description Field"
+    "PropertyPaneDescription": "MAMA OCEC SPIDERMAN",
+    "BasicGroupName": "Webpart Settings",
+    "DescriptionFieldLabel": "Description Field",
+    "ListNameFieldLabel" : "List name",
+    "ListNameFieldLabelDescription" : "Choose List from the dropdown"
   }
 });

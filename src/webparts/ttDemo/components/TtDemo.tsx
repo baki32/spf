@@ -1,176 +1,160 @@
 import * as React from 'react';
-import {   
-  Button, 
-  DetailsList,
-  MarqueeSelection,
-  Selection,
-  TextField,
-  Link,
-  Callout
- } from 'office-ui-fabric-react/lib/';
+import { DefaultButton, TextField, Selection } from 'office-ui-fabric-react/lib/';
+//import { Modal } from 'office-ui-fabric-react/lib/Modal';
 import styles from './TtDemo.module.scss';
-
-
-import {SPHttpClient} from '@microsoft/sp-http';
-import * as Ctx from '@microsoft/sp-page-context'
-
-import {
-  Environment,
-  EnvironmentType
-} from '@microsoft/sp-core-library';
-
-import MockHttpClient from '../MockHttpClient';
-
-
-import { ITtDemoWebPartProps } from '../ITtDemoWebPartProps';
-
-export interface ITtDemoProps extends ITtDemoWebPartProps {
-  httpClient: SPHttpClient;
-  //mockHttpClient: MockHttpClient;
-  siteUrl: string;
-}
-
-export interface ITtDemoState {
-  status?: string;
-  items?: IListItem[];
-  selectionDetails?: string;
-}
-
-export interface IListItem {
-  Title?: string;
-  Id: number;
-}
-
-let _items : IListItem[];
+import HyperList from './HyperList';
+import HyperModal from './HyperModal';
+//import { IWebPartContext} from '@microsoft/sp-webpart-base';
+//import { Environment, EnvironmentType } from '@microsoft/sp-core-library';
+//import MockHttpClient from '../MockHttpClient';
+import { IListItem, ITtDemoProps, ITtDemoState } from '../Interfaces/MainInterfaces';
+//import { SPHttpClientResponse  } from '@microsoft/sp-http';
+import ListOperations from '../classes/ListOperations';
+import { MessageBar, MessageBarType } from 'office-ui-fabric-react/lib/MessageBar';
 
 export default class TtDemo extends React.Component<ITtDemoProps, ITtDemoState> {
+  private readonly classFadeIn: string = "ms-u-fadeIn100";
+  private readonly classFadeOut: string = "ms-u-slideUpOut10";
   
-  private _menuButtonElement: HTMLElement;
-  private listItemEntityTypeName: string = undefined;
+  private _items : IListItem[];
+  private _filterText : string;
+  private _operations : ListOperations;
+  private _messageClass: string;
   private _selection: Selection;
 
+  get Items(): IListItem[] {
+      if (this._filterText){
+       return this._items.filter(i => i.Title.toLowerCase().indexOf(this._filterText.toLowerCase()) > -1);
+    }
+      return this._items;
+  }
+  set Items(newItems: IListItem[]) {
+      this._items = newItems;
+  }
+  
   constructor(props: ITtDemoProps, state: ITtDemoState) {
     super(props);
 
-    _items = _items || [] as IListItem[];
-
-    this._onRenderItemColumn = this._onRenderItemColumn.bind(this);
+    this._items = this._items || [] as IListItem[];    
+    this._messageClass = styles.hide;
+    this._operations = new ListOperations(this.props.httpClient, this.props.siteUrl, this.props.listName);
     this._selection = new Selection({
-      onSelectionChanged: () => this.setState({ 
-        selectionDetails: this._getSelectionDetails(),
-        status: 'Selection Changed',
-        items: _items
-      })
+      onSelectionChanged: () => {
+        this.setState({
+          selection: this._selection
+        });
+      }
     });
-
-
     this.state = {
       status: this.listNotConfigured(this.props) ? 'Please configure list in Web Part properties' : 'Ready',
-      items: _items,
-      selectionDetails: this._getSelectionDetails()
+      items: this.Items,
+      showModal: false,
+      selection: this._selection,
+      messageVisible: true,
+      messageClass: styles.hide,
+      messageType: MessageBarType.success
     };
-  }
-
-  private _onRenderItemColumn(item, index, column) {
-    if (column.key === 'name') {
-      return <Link data-selection-invoke={ true }>{ item[column.key] }</Link>;
-    }
-
-    return item[column.key];
-  }
-
-  private _getSelectionDetails(): string {
-    let selectionCount = this._selection.getSelectedCount();
-
-    switch (selectionCount) {
-      case 0:
-        return 'No items selected';
-      case 1:
-        return '1 item selected: ' + (this._selection.getSelection()[0] as any).Title;
-      default:
-        return `${ selectionCount } items selected`;
-    }
   }
 
 
   public componentWillReceiveProps(nextProps: ITtDemoProps): void {
-    this.listItemEntityTypeName = undefined;
     this.setState({
       status: this.listNotConfigured(nextProps) ? 'Please configure list in Web Part properties' : 'Ready',
-      items: _items,
-      selectionDetails: this._getSelectionDetails()
+      items: this.Items,
     });
+    this._operations = new ListOperations(this.props.httpClient, this.props.siteUrl, nextProps.listName);
   }
-
-  
+ 
   public render(): React.ReactElement<ITtDemoProps> {
-    //let { items, selectionDetails } = this.state;
-    
-
-    const items: JSX.Element[] = this.state.items.map((item: IListItem, i: number): JSX.Element => {
-      return (
-        <li>{item.Title} ({item.Id}) </li>
-      );
-    });
+    //let { items, status } = this.state;
     
     return (
       <div className={styles.helloWorld}>
         <div className={styles.container}>
+          <div>
+           { this.state.messageVisible && 
+              <MessageBar messageBarType={this.state.messageType} className={`${this.state.messageClass} ${styles.over}`} 
+                onDismiss={() => {
+                  this.setState({
+                      messageClass: this.classFadeOut,
+                      status: ""
+                  });                
+                }}>
+              <span>{this.state.status}</span>
+              </MessageBar>
+          }
+          </div>
           <div className={`ms-Grid-row ms-bgColor-themeDark ms-fontColor-white ${styles.row}` }>
-            <div className='ms-Grid-col ms-u-lg10 ms-u-xl8 ms-u-xlPush2 ms-u-lgPush1'>
+             
+            <div className='ms-Grid-col ms-u-lg10 ms-u-xl8 ms-u-xlPush2 ms-u-lgPush1'>             
               <span className='ms-font-xl ms-fontColor-white'>
                 Sample SharePoint CRUD operations in React
               </span>
             </div>
-          </div>
-          <div className={`ms-Grid-row ms-bgColor-themeDark ms-fontColor-white ${styles.row}` }>
-            <div className='ms-Grid-col ms-u-lg10 ms-u-xl8 ms-u-xlPush2 ms-u-lgPush1'>
-              <Button disabled={this.listNotConfigured(this.props) } onClick={() => this.createItem() }>Create item</Button>              
+            <div className='ms-Grid-col ms-u-lg10 ms-u-xl8 ms-u-xlPush2 ms-u-lgPush1'>             
+              <span className='ms-font-l ms-fontColor-white'>
+                Currently working with: {this.props.listName}
+              </span>              
+            </div>
+            <div className='ms-Grid-col ms-u-lg10 ms-u-xl8 ms-u-xlPush2 ms-u-lgPush1'>             
+              <span className='ms-font-s ms-fontColor-white'>
+                Description set in property pane: {this.props.description}
+              </span>              
             </div>
           </div>
           <div className={`ms-Grid-row ms-bgColor-themeDark ms-fontColor-white ${styles.row}` }>
             <div className='ms-Grid-col ms-u-lg10 ms-u-xl8 ms-u-xlPush2 ms-u-lgPush1'>
-              <Button disabled={this.listNotConfigured(this.props) } onClick={() => this.readItems() }>Read all items</Button>
+              <DefaultButton disabled={this.listNotConfigured(this.props) } onClick={() => this.createItem() }>Create item</DefaultButton>              
+            </div>
+          </div>
+          <div className={`ms-Grid-row ms-bgColor-themeDark ms-fontColor-white ${styles.row}` }>
+            <div className='ms-Grid-col ms-u-lg10 ms-u-xl8 ms-u-xlPush2 ms-u-lgPush1'>
+              <DefaultButton disabled={this.listNotConfigured(this.props) } onClick={() => this.readItems() }>Read all items</DefaultButton>
+            </div>
+          </div>
+
+          <div className={`ms-Grid-row ms-bgColor-themeDark ms-fontColor-white ${styles.row}` }>
+            <div className='ms-Grid-col ms-u-lg10 ms-u-xl8 ms-u-xlPush2 ms-u-lgPush1'>              
+              <DefaultButton disabled={this.listNotConfigured(this.props) } onClick={() => this.deleteSelectedItems() }>Delete selected items</DefaultButton>
             </div>
           </div>
           <div className={`ms-Grid-row ms-bgColor-themeDark ms-fontColor-white ${styles.row}` }>
             <div className='ms-Grid-col ms-u-lg10 ms-u-xl8 ms-u-xlPush2 ms-u-lgPush1'>              
-              <Button disabled={this.listNotConfigured(this.props) } onClick={() => this.deleteItem() }>Delete last item</Button>
+              <DefaultButton disabled={this.listNotConfigured(this.props) } onClick={() => this.errorBazmek() }>Error bazmek</DefaultButton>
             </div>
           </div>
           <div className={`ms-Grid-row ms-bgColor-themeDark ms-fontColor-white ${styles.row}` }>
             <div className='ms-Grid-col ms-u-lg10 ms-u-xl8 ms-u-xlPush2 ms-u-lgPush1'>
               {this.state.status}
-              <ul>
-                {items}
-              </ul>
+              {/*<ul>
+                {itemsR}
+              </ul>*/}
             </div>
           </div>
-          <div className={`ms-Grid-row ms-fontColor-dark ${styles.row} ${styles.detailedList}` }>
-            <div>{ this.state.selectionDetails }</div>
-              <TextField
-                label='Filter by name:'
-                onChanged={ text => this.setState({ 
-                  selectionDetails: this._getSelectionDetails(), 
-                  status: `Query for filter: ${text}`,
-                  items: text ? _items.filter(i => i.Title.toLowerCase().indexOf(text.toLowerCase()) > -1) : _items }) 
-                }
+          <div className={`ms-Grid-row ms-fontColor-dark ${styles.row} ${styles.detailedList}`} >
+             <TextField className={`ms-Grid-row ms-fontColor-dark ${styles.row} ${styles.detailedList}`}
+                label='Filter by name:'                
+                onChanged={ text => {
+                    this.setState({                   
+                      status: `Query for filter: ${text}`,                      
+                      items: this.Items
+                      });
+                      this._filterText = text;
+                      this.setState({
+                        status : `Query for filter: ${text}`,                     
+                        items: this.Items
+                      });
+                  }
+                 }
               />
-              <MarqueeSelection selection={ this._selection }>
-                <DetailsList
-                  items={ this.state.items }
-                  setKey='set'
-                  selection={ this._selection }
-                  onItemInvoked={ (item) => alert(`Item invoked: ${item.Title}`) }
-                  onRenderItemColumn={ this._onRenderItemColumn }
-                  />
-              </MarqueeSelection>
+            <HyperList items = {this.state.items} selection = {this.state.selection} />
+            <HyperModal visible = {this.state.showModal} />            
           </div>
         </div>
       </div>
     );
-  }
-  
+  }  
+
   private listNotConfigured(props: ITtDemoProps): boolean {
     return props.listName === undefined ||
       props.listName === null ||
@@ -178,85 +162,129 @@ export default class TtDemo extends React.Component<ITtDemoProps, ITtDemoState> 
   }
 
   private createItem(): void {
-    
-
-    // this.getListItemEntityTypeName()
-    //   .then((listItemEntityTypeName: string): Promise<Response> => {
-    //     const body: string = JSON.stringify({
-    //       '__metadata': {
-    //         'type': listItemEntityTypeName
-    //       },
-    //       'Title': `Item ${new Date()}`
-    //     });
-    //     return this.props.httpClient.post(`${this.props.siteUrl}/_api/web/lists/getbytitle('${this.props.listName}')/items`, null,null);
-    //   })
     this.setState({
       status: 'Creating item...',
-      items: _items,
-      selectionDetails : this._getSelectionDetails()
     });
-
-    MockHttpClient.addItem(`Item ${new Date()}`)
-      .then((response: IListItem[]): boolean => {
-      _items = response;
+    this._showModal();
+    this._operations.createItem(`Item ${new Date()}`)
+    .then((resonse: IListItem[]): void => {      
+      this._items = resonse;
       this.setState({
-        status: "Item Added",
-        items: _items,
-        selectionDetails: this._getSelectionDetails()
-      });
-        return true;
-      });
-      // .then((item: IListItem): void => {
-      //   this.setState({
-      //     status: `Item '${item.Title}' (ID: ${item.Id}) successfully created`,
-      //     items: []
-      //   });
-      // }, (error: any): void => {
-      //   this.setState({
-      //     status: 'Error while creating the item: ' + error,
-      //     items: []
-      //   });
-      // });
-      
-    
+          status: "Item Added",
+          items: this.Items
+        });
+        this._closeModal();
+        this.reportSuccess();
+    },
+    (reason) => { 
+      this.setState({
+        status: reason
+      }) ;
+      this._closeModal();
+    });
   }
 
-  private readItems(): void {
+  private readItems() {
     this.setState({
       status: 'Loading all items...',
-      items: [],
-      selectionDetails: ""
     });
-    
-    MockHttpClient.getItems(this.props.siteUrl)
-      .then((data: IListItem[]) => {
-        
-        return data;
-      }).then((response: IListItem[]): void => {
-        _items = response;
-        this.setState({
+    this._showModal();
+    this._operations.readItems()
+    .then((response: IListItem[]): void => {     
+          this._items = response;            
+          this.setState({
           status: `Successfully loaded items`,
-          items: _items,
-          selectionDetails: ""
-      });
-      });
+          items: this.Items,
+          });
+        this._closeModal();
+        this.reportSuccess();
+    }, reason => {
+      console.log(reason);
+    });    
+  }
+  
+  private async delay(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
-  private deleteItem(): void {
-    // if (!window.confirm('Are you sure you want to delete the latest item?')) {
-    //   return;
-    // }
-    
-    MockHttpClient.deleteLastItem()
-      .then((data: IListItem[]) => {        
-        return data;
-      }).then((response: IListItem[]): void => {
-        _items = response
-        this.setState({
-          status: `Successfully deleted last item`,
-          items: _items,
-          selectionDetails: this._getSelectionDetails()
-        });
+  private async deleteSelectedItems(){      
+      this._showModal();
+      var promisMega: Promise<boolean>[] = new Array<Promise<boolean>>();
+      var deletedIDs = this._selection.getSelection().map(a => (a as IListItem).Id).join(',');
+      this._selection.getSelection().forEach(async (item: IListItem) => {
+        promisMega.push(this.deleteItem(item.Id));
       });
+      try{
+        await Promise.all(promisMega);
+        this.setState({
+          status: `Sucessfully deleted items: ${deletedIDs}`          
+        });
+        this.reportSuccess();
+      }
+      catch(ex){
+        this.setState({
+          status: `Error deleting items: ${deletedIDs} ${ex}`          
+        });
+        this.reportError();
+      }
+      finally{
+        this._closeModal();    
+      }
+  }
+
+   private deleteItem(id: number): Promise<boolean> {               
+    return new Promise<boolean>((resolve) => {      
+      this.state.selection.setAllSelected(false);
+      this._operations.deleteItem(id).then((res) => {
+      this._items = res;
+      this.setState({
+        status: `Successfully deleted item ${id}`,
+        items: this.Items,
+      });         
+    })
+    .then(() => {
+      resolve(true);
+    });      
+    });
+   }
+
+  private errorBazmek(){
+    this.setState({
+      status: "ERROR BAZMEK"
+    });
+    this.reportError();
+
+  }
+
+  private _showModal() {
+    this.setState({
+      showModal: true
+    });    
+  }
+
+  private _closeModal() {    
+    this.setState({
+      showModal: false
+    });
+  }
+
+  private reportSuccess(){
+    this.setState({
+        messageType: MessageBarType.success,
+        messageClass: this.classFadeIn
+      });
+    
+    this.delay(2000).then(() =>{
+      this.setState({
+        messageClass: this.classFadeOut
+      });
+    });
+  }
+
+  private reportError(){
+    this.setState({
+        messageType: MessageBarType.error,
+        messageClass: this.classFadeIn
+      });        
   }
 }

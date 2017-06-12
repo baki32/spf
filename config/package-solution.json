@@ -2,7 +2,7 @@
   "solution": {
     "name": "spf-client-side-solution",
     "id": "bdbf25a3-ccf7-4496-8dd9-6fd19c84452e",
-    "version": "1.0.0.0"
+    "version": "1.0.0.2"
   },
   "paths": {
     "zippedPackage": "solution/spf.sppkg"
